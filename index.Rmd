@@ -1,0 +1,259 @@
+---
+title: "Project 3"
+author: "Hinami Nishi"
+date: "2023-04-13"
+subtitle: "STATS 220 Semester One 2023"
+output:
+  html_document:
+    toc: yes
+    df_print: paged
+  bookdown::html_document2:
+    fig_height: 5
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    code_folding: show
+    theme: readable
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(jsonlite)
+library(magick)
+```
+
+
+# Introduction
+
+## Explaining what situation I developed my playlist for and what kinds of songs I wanted on my playlist
+
+My favorite music genre is jazz, and I think it's a relatively flexible genre that can be played during study sessions, road trips, parties, or as a relaxing playlist. Therefore, I have created a jazz playlist that can be enjoyed in any of these situations. However, I particularly enjoy listening to it at home, where I can set up candles and fully immerse myself in the night's jazzy ambiance.
+
+## Giving one example that illustrates how the process I used to create the playlist (i.e. the data manipulations I carried out) helped me to find relevant songs for my playlist
+
+
+- Although I specified in the link for the iTunes Search API endpoint that it should return a list of music tracks, albums, and artists related to the search **term** "jazz", it didn't return any results for the jazz **genre**. Therefore, I used the `filter() function`{.bg-info} to resolve this issue, filtering out the term "Jazz" from the 'genre' variable.
+
+
+
+
+
+
+### Names of the songs in your playlist
+
+```{r}
+read_csv("my_playlist.csv") %>% 
+  knitr::kable()
+```
+
+
+
+## Explaining why nested JSON could be an advantageous to structure data about songs, including one specific example related to a feature/attribute of a song.
+
+
+Firstly, JSON is a platform for different programming languages that serves a purpose of providing human-readable and computer-readable formats. 
+
+Using nested JSON files, we can organize and store a variety of attributes of a song in a hierarchical manner. This hierarchical organization of data can help to exhibit complex relationships between different attributes of a song. An example of a feature/attribute of a song that can be structured using nested JSON is the `duration`{.bg-info} of a song. In this case, the key will be "duration" and it will contain an array of values for milliseconds, seconds, and minutes (e.g. duration_ms, duration_s, and duration_min as examples to my_playlist).
+
+
+# Key features of my playlist
+
+## Four key features of my playlist, using a combination of R chunks, markdown and inline R code
+
+```{r}
+
+durations <- read_csv("my_playlist.csv") %>%
+  mutate(song_era = ifelse(released_year < 1980, "<1980",
+                           ifelse(released_year > 1979 & released_year < 2000, "1980-1999", ">1999")))%>%
+  group_by(song_era) %>%
+  summarise(num_songs = n(),
+            avg_duration_min = round(mean(duration_min),2),
+            max_duration_min = round(max(duration_min),2),
+            min_duration_min = round(min(duration_min),2),
+            var_duration_min = round(var(duration_min),2),
+            sd_duration_min = round(sd(duration_min),2))
+View(durations)
+durations
+
+```
+
+#### The average duration of songs compared with different time periods: 
+- The average duration of a song in the 2000's millennial era is around `r durations$avg_duration_min[3]` minutes, from 1980-1999 is around `r durations$avg_duration_min[1]` minutes, and in the oldest time period is around `r durations$avg_duration_min[2]` minutes.
+
+#### Maximum duration of songs compared with different time periods: 
+- The maximum duration of a song in the 2000's millennial era is around `r durations$max_duration_min[3]`minutes, from 1980-1999 is around `r durations$max_duration_min[1]` minutes, and in the oldest time period is around `r durations$max_duration_min[2]` minutes. 
+
+
+#### The variance duration of songs compared with different time periods: 
+- The variance for the duration of a song in the 2000's millennial era is around `r durations$var_duration_min[3]`minutes, from 1980-1999 is around `r durations$var_duration_min[1]` minutes, and in the oldest time period is around `r durations$var_duration_min[2]` minutes. 
+
+#### The standard deviation of the duration of songs compared with different time periods: 
+- The standard deviation for a duration of a song in the 2000's millennial era is around `r durations$sd_duration_min[3]`minutes, from 1980-1999 is around `r durations$sd_duration_min[1]` minutes, and in the oldest time period is around `r durations$sd_duration_min[2]` minutes.
+
+
+# SQL examples
+
+## FIRST EXAMPLE 
+
+```sql
+SELECT artistId, artistName AS artist, trackName AS track_name,     primaryGenreName AS genre, trackTimeMillis AS duration_ms, artworkUrl100 AS img_url, CHAR_LENGTH(track_name) AS track_name_length, duration_ms / 1000 AS duration_s, ROUND(duration_ms / 1000 / 60, 2) AS duration_min, CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER) AS released_year
+  
+  FROM tbl_songs
+  WHERE genre = 'Jazz' AND released_year < 2010 AND artist != 'Kenny G'
+  ORDER BY artist ASC
+  LIMIT 20;
+```
+
+
+## SECOND EXAMPLE
+
+```sql
+SELECT artistId, artistName AS artist, trackName AS track_name,  primaryGenreName AS genre, trackTimeMillis AS duration_ms, artworkUrl100 AS img_url, LEN(track_name) AS track_name_length, duration_ms / 1000 AS duration_s, ROUND(duration_ms / 1000 / 60, 2) AS duration_min, CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER) AS released_year
+
+  FROM tbl_songs 
+  WHERE primaryGenreName LIKE '%Jazz%' AND released_year < 2010 AND NOT artistName == 'Kenny G'
+  ORDER BY artistName ASC
+  LIMIT 20;
+```
+
+
+```sql
+# !NOT FOR ASSESSMENT!
+SELECT 
+    AVG(ROUND(trackTimeMillis / 1000 / 60, 2)) AS avg_duration_min, 
+    MAX(ROUND(trackTimeMillis / 1000 / 60, 2)) AS max_duration_min, 
+    MIN(ROUND(trackTimeMillis / 1000 / 60, 2)) AS min_duration_min,
+    STDDEV(ROUND(trackTimeMillis / 1000 / 60, 2)) AS sd_duration_min,
+    VAR(ROUND(trackTimeMillis / 1000 / 60, 2)) AS var_duration_min,
+    COUNT(*) AS num_songs,
+    CASE 
+      WHEN released_year < 1980 THEN '<1980'
+      WHEN released_year >= 1980 AND released_year <= 1999 THEN '1980-1999'
+      ELSE '<2000'
+    END AS song_era
+  FROM tbl_songs
+  GROUP BY song_era;
+# !NOT FOR ASSESSMENT!
+```
+
+
+
+## Explaining how each example is similar to the data manipulations I carried out to create the data frame my_playlist. 
+
+Although both SQL queries slightly differ, both  should still be able produce something similar to the data manipulations I've carried out to create`my_playlist.`
+
+`EXPLANATIONS FOR THE 1ST EXAMPLE:`{.bg-info} 
+
+- Using the SQL operator, I've `SELECT`ed the variables of interest `FROM` tbl_songs like how I did in `select`ing the variables of interest in R with tidyverse functions.
+
+- I then assigned it to the alias name that's appropriate by using `AS` in sql. This performs the same to how I `rename`ed the variables to an appropriate variable name with tidyverse.
+
+- I've used the `ROUND` built-in function in SQL to carry out the same purpose as the `round` function in tidyverse. 
+
+-  To get the length of characters in SQL, I used `CHAR_LENGTH`(track_name). This carries out the same role as `nchar`(track_name) in tidyverse. 
+
+- Generally, the `CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER)` in SQL is equivalent to `as.numeric(substring(initial_playlist$releaseDate, 1,4))` from tidyverse. 
+
+- `FROM` `tbl_songs`, specifies the table we want to select the data from, and this is equivalent to what I did in tidyverse: `initial_playlist` `%>%`
+
+- `WHERE` was used to filter the data based on certain conditions: genre = 'jazz', released_year < 2010, and artist != 'Kenny G'. Only rows that meet all of these conditions will be included in the output. This carries out similarly to the `filter` function in tidyverse (This format seems to look more closer to what I did in tidyverse than in my second SQL query example.)
+
+- `ORDER BY` was used to sort the artist's name in ascending order which carries out the same role as how I used the `arange` function in tidyverse. It wasn't specified in the argument for tidyverse, but the function automatically sorts the name in ascending order. 
+
+- Finally, in SQL, I've `LIMIT`ed the number of observations to 20. This is the same as how I used the `slice` function in tidyverse; slice(1:20)
+
+
+
+
+
+`EXPLANATIONS FOR THE 2ND EXAMPLE: `{.bg-info}
+A lot of it is similar to the first SQL example. However, what's different from the first example which also carries out to create my_plalylist (using data manipulations) are as shown below:  
+
+- Instead of using `CHAR_LENGTH`(track_name), I've used `LEN`(track_name) to get the length of characters which is equivalent to how I used the `nchar`() function in tidyverse.
+
+-  `WHERE` was used to filter the data based on certain conditions. Only rows that meet the flowing conditions will be included in the results: 
+
+1. `LIKE '%jazz%` will match any string containing the word "jazz" anywhere in the string. This carries out similarly to what I did in tidyverse: `filter(genre=="Jazz")`. 
+
+2. Another condition applies where `released_year < 2010`  `AND` does `NOT` meet the condition that `artistName == 'Kenny G'`. This is equivalent to  `filter(released_year < 2010, artist != "Kenny G")`. What's different with this and the previous SQL example is that I'm using `AND NOT` instead of using `!=` to carryout the role of what the filter() function along with its arguments does in tidyverse.  
+
+
+Both SQL query examples are expressed differently, but it should execute to create my_playlist. 
+
+
+# Learning reflection
+
+##  Describe in your own words at least ONE important idea you learned from Module 3: Creating new variables and data tables.
+
+Out of the many important ideas I have learnt from Module 3 is the differences and the advantageous aspects in SQL, JSON and API: 
+
+  1. Json is a file human and computer readable format, that allows for sharing and storing data. 
+  
+  2. SQL is a language syntax that allows for accession and data manipulation. 
+  
+  3. API is a tool for building software applications and communicating between different software components. In this project, I used API to access data from an online database. 
+
+
+## How my project demonstrates creativity. 
+
+
+I was instructed to come up with queries to the iTunes API to extract data from an online database to create `my_playlist`.   
+
+- As mentioned already, I attempted in making further specifications in the parameters for the iTunes API such as using genre and explicit, to ensure I get returned the songs I wanted. This involved using parameters for the  iTunes API that wasn't mentioned in module 3; I used `genreId=` and `explicit=`. However, this didn't work as planned, hence, I approached different measures to resolve this issue (explained under Introduction).
+
+- More importantly, I used the `substring() function`{.bg-info} to extract just the year of release date and converted it to a numeric variable  by using `as.numeric() function`{.bg-info}. This was done so, so that I can make my summary table. I used the  released year of the song to group them into three: <1980, 1980-2000 and >1999 groups. 
+
+
+## Things related to data technologies that i'm more curious about exploring further
+
+If SQL is used to manage and manipulate relational databases, which can be hosted on `cloud platforms`{.bg-info} such as Amazon Web Services' RDS and or Microsoft Azure's SQL Database. Maybe we could go in depth in learning what these cloud platforms are, how they are used, and its pros and cons. 
+
+## Appendix
+
+```{r file='exploration.R', eval=FALSE, echo=TRUE}
+```
+
+
+
+# EXTRA
+
+1. To create the summary table, I wanted to group the year of the release date by <1980, 1980-2000 and >1999 This means that I had to further specify in the ifelse() function so that I don't just get a group that is just less than and greater than a value, but also a group showing the range between one value to another value. A logical operator `&`{.bg-info}, which means "AND"  was used in the second ifelse() statement to test if released_year is greater than 1979 AND less than 2000.
+
+```r
+durations <- read_csv("my_playlist.csv") %>%
+  mutate(song_era = ifelse(released_year < 1980, "<1980",
+                           ifelse(released_year > 1979 & released_year < 2000, "1980-1999", ">1999")))%>%
+  group_by(song_era) %>%
+  summarise(num_songs = n(),
+            avg_duration_min = round(mean(duration_min),2),
+            max_duration_min = round(max(duration_min),2),
+            min_duration_min = round(min(duration_min),2),
+            var_duration_min = round(var(duration_min),2),
+            sd_duration_min = round(sd(duration_min),2))
+```
+
+
+- `CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER)`{.bg-info} in SQL, which performs similarly to `as.numeric(substring(initial_playlist$releaseDate, 1,4))`(expressed through tidyverse) demonstrates creativity as well.   
+
+
+
+
+
+
+
+
+
+
+
+```{css}
+body { background-color: #c2c2d6; }
+```
+
+
+
+
+
+
+
