@@ -56,7 +56,7 @@ View(durations)
 
 
 
-# ANIMATION GIF ----> THIS FOR ASSESSMENT
+# ANIMATION GIF ---->
 library(magick)
 data <- read_csv("my_playlist.csv")
 
@@ -70,7 +70,7 @@ image_read(img_urls) %>%
 
 
 
-# ggplot  GRAPH PRESENTATION ----> NOT THIS ONE, BUT IT WORKS
+# ggplot  GRAPH PRESENTATION ----> 
 durations <- read_csv("my_playlist.csv") %>%
   mutate(song_era = ifelse(released_year < 1980, "<1980",
                            ifelse(released_year > 1979 & released_year < 2000, "1980-1999", ">1999"))) %>%
